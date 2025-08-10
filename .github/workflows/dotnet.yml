@@ -31,12 +31,28 @@ jobs:
     - name: Publish
       run: dotnet publish --no-build --configuration Release --output ./publish
       
+    - name: Install Web Deploy
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: |
+        # 下載並安裝 Web Deploy
+        $webDeployUrl = "https://download.microsoft.com/download/0/1/D/01DC28EA-638C-4A22-A57B-4CEF97755C6C/WebDeploy_amd64_en-US.msi"
+        $webDeployPath = "$env:TEMP\WebDeploy_amd64_en-US.msi"
+        
+        Write-Host "下載 Web Deploy..."
+        Invoke-WebRequest -Uri $webDeployUrl -OutFile $webDeployPath
+        
+        Write-Host "安裝 Web Deploy..."
+        Start-Process msiexec.exe -ArgumentList "/i", $webDeployPath, "/quiet", "/norestart" -Wait
+        
+        # 等待安裝完成
+        Start-Sleep -Seconds 10
+        
+        Write-Host "Web Deploy 安裝完成"
+      shell: powershell
+      
     - name: Deploy to Azure VM IIS
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
-        # 安裝 Web Deploy PowerShell 模組
-        Install-Module -Name WebDeploy -Force -AllowClobber
-        
         # 設定部署參數
         $publishPath = ".\publish"
         $serverUrl = "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
@@ -44,8 +60,23 @@ jobs:
         $username = "${{ secrets.AZURE_VM_USERNAME }}"
         $password = "${{ secrets.AZURE_VM_PASSWORD }}"
         
+        # 檢查 MSDeploy 是否存在
+        $msdeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+        if (-not (Test-Path $msdeployPath)) {
+            $msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+        }
+        
+        if (-not (Test-Path $msdeployPath)) {
+            Write-Error "找不到 MSDeploy.exe"
+            exit 1
+        }
+        
+        Write-Host "使用 MSDeploy 路徑: $msdeployPath"
+        Write-Host "部署來源: $publishPath"
+        Write-Host "部署目標: $siteName"
+        
         # 執行部署
-        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+        & $msdeployPath `
           -verb:sync `
           -source:contentPath="$publishPath" `
           -dest:contentPath="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
@@ -53,7 +84,8 @@ jobs:
           -skip:Directory="\\App_Data" `
           -enableRule:DoNotDeleteRule `
           -retryAttempts:3 `
-          -retryInterval:5000
+          -retryInterval:5000 `
+          -verbose
       shell: powershell
       
     - name: Deployment Summary
