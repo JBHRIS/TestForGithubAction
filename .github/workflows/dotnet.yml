@@ -55,7 +55,7 @@ jobs:
       run: |
         # Set deployment parameters
         $publishPath = ".\publish"
-        $serverUrl = "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
+        $serverUrl = "${{ secrets.AZURE_VM_HOST }}"
         $siteName = "${{ secrets.IIS_SITE_PATH }}"
         $username = "${{ secrets.AZURE_VM_USERNAME }}"
         $password = "${{ secrets.AZURE_VM_PASSWORD }}"
@@ -74,33 +74,47 @@ jobs:
         Write-Host "Using MSDeploy path: $msdeployPath"
         Write-Host "Deploy source: $publishPath"
         Write-Host "Deploy target: $siteName"
-        Write-Host "Server URL: $serverUrl"
+        Write-Host "Server: $serverUrl"
         
-        # Execute deployment using iisApp provider instead of contentPath
-        & $msdeployPath `
-          -verb:sync `
-          -source:iisApp="$publishPath" `
-          -dest:iisApp="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
-          -allowUntrusted:true `
-          -enableRule:AppOfflineRule `
-          -retryAttempts:3 `
-          -retryInterval:5000 `
-          -verbose
-          
+        # Execute deployment using the same format as your working publish profile
+        $deployCommand = @(
+            "-verb:sync"
+            "-source:iisApp=`"$publishPath`""
+            "-dest:iisApp=`"$siteName`",computerName=`"https://$serverUrl:8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`""
+            "-allowUntrusted"
+            "-enableRule:DoNotDeleteRule"
+            "-skip:Directory=`"\\App_Data`""
+            "-retryAttempts:3"
+            "-retryInterval:5000"
+            "-verbose"
+        )
+        
+        Write-Host "Executing MSDeploy command..."
+        & $msdeployPath $deployCommand
+        
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "First deployment attempt failed, trying alternative method..."
+            Write-Host "Deployment failed with exit code: $LASTEXITCODE"
             
-            # Alternative: Use contentPath with full physical path
-            & $msdeployPath `
-              -verb:sync `
-              -source:contentPath="$publishPath" `
-              -dest:contentPath="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
-              -allowUntrusted:true `
-              -enableRule:AppOfflineRule `
-              -retryAttempts:2 `
-              -retryInterval:3000 `
-              -verbose
+            # Try alternative approach - use contentPath
+            Write-Host "Trying alternative deployment method..."
+            $deployCommand2 = @(
+                "-verb:sync"
+                "-source:contentPath=`"$publishPath`""
+                "-dest:contentPath=`"$siteName`",computerName=`"https://$serverUrl:8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`""
+                "-allowUntrusted"
+                "-retryAttempts:2"
+                "-verbose"
+            )
+            
+            & $msdeployPath $deployCommand2
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Both deployment methods failed"
+                exit 1
+            }
         }
+        
+        Write-Host "Deployment completed successfully!"
       shell: powershell
       
     - name: Deployment Summary
