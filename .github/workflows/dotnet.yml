@@ -1,7 +1,5 @@
-# This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
-
-name: .NET
+# This workflow will build a .NET project and deploy to Azure VM IIS
+name: .NET CI/CD
 
 on:
   push:
@@ -10,19 +8,58 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
-
+  build-and-deploy:
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+        
     - name: Restore dependencies
       run: dotnet restore
+      
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --configuration Release
+      
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal --configuration Release
+      
+    - name: Publish
+      run: dotnet publish --no-build --configuration Release --output ./publish
+      
+    - name: Deploy to Azure VM IIS
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: |
+        # 安裝 Web Deploy PowerShell 模組
+        Install-Module -Name WebDeploy -Force -AllowClobber
+        
+        # 設定部署參數
+        $publishPath = ".\publish"
+        $serverUrl = "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
+        $siteName = "${{ secrets.IIS_SITE_PATH }}"
+        $username = "${{ secrets.AZURE_VM_USERNAME }}"
+        $password = "${{ secrets.AZURE_VM_PASSWORD }}"
+        
+        # 執行部署
+        & "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe" `
+          -verb:sync `
+          -source:contentPath="$publishPath" `
+          -dest:contentPath="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
+          -allowUntrusted:true `
+          -skip:Directory="\\App_Data" `
+          -enableRule:DoNotDeleteRule `
+          -retryAttempts:3 `
+          -retryInterval:5000
+      shell: powershell
+      
+    - name: Deployment Summary
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: |
+        echo "🚀 部署完成！"
+        echo "📍 網站位址: http://${{ secrets.AZURE_VM_HOST }}/App/Test/TestForGithubAction"
+        echo "📝 部署路徑: ${{ secrets.IIS_SITE_PATH }}"
+      shell: powershell
