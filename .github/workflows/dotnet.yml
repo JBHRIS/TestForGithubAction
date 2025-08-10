@@ -34,48 +34,48 @@ jobs:
     - name: Install Web Deploy
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
-        # 下載並安裝 Web Deploy
+        # Download and install Web Deploy
         $webDeployUrl = "https://download.microsoft.com/download/0/1/D/01DC28EA-638C-4A22-A57B-4CEF97755C6C/WebDeploy_amd64_en-US.msi"
         $webDeployPath = "$env:TEMP\WebDeploy_amd64_en-US.msi"
         
-        Write-Host "下載 Web Deploy..."
+        Write-Host "Downloading Web Deploy..."
         Invoke-WebRequest -Uri $webDeployUrl -OutFile $webDeployPath
         
-        Write-Host "安裝 Web Deploy..."
+        Write-Host "Installing Web Deploy..."
         Start-Process msiexec.exe -ArgumentList "/i", $webDeployPath, "/quiet", "/norestart" -Wait
         
-        # 等待安裝完成
+        # Wait for installation to complete
         Start-Sleep -Seconds 10
         
-        Write-Host "Web Deploy 安裝完成"
+        Write-Host "Web Deploy installation completed"
       shell: powershell
       
     - name: Deploy to Azure VM IIS
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
-        # 設定部署參數
+        # Set deployment parameters
         $publishPath = ".\publish"
         $serverUrl = "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
         $siteName = "${{ secrets.IIS_SITE_PATH }}"
         $username = "${{ secrets.AZURE_VM_USERNAME }}"
         $password = "${{ secrets.AZURE_VM_PASSWORD }}"
         
-        # 檢查 MSDeploy 是否存在
+        # Check if MSDeploy exists
         $msdeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
         if (-not (Test-Path $msdeployPath)) {
             $msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
         }
         
         if (-not (Test-Path $msdeployPath)) {
-            Write-Error "找不到 MSDeploy.exe"
+            Write-Error "MSDeploy.exe not found"
             exit 1
         }
         
-        Write-Host "使用 MSDeploy 路徑: $msdeployPath"
-        Write-Host "部署來源: $publishPath"
-        Write-Host "部署目標: $siteName"
+        Write-Host "Using MSDeploy path: $msdeployPath"
+        Write-Host "Deploy source: $publishPath"
+        Write-Host "Deploy target: $siteName"
         
-        # 執行部署
+        # Execute deployment
         & $msdeployPath `
           -verb:sync `
           -source:contentPath="$publishPath" `
@@ -91,7 +91,7 @@ jobs:
     - name: Deployment Summary
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
-        echo "🚀 部署完成！"
-        echo "📍 網站位址: http://${{ secrets.AZURE_VM_HOST }}/App/Test/TestForGithubAction"
-        echo "📝 部署路徑: ${{ secrets.IIS_SITE_PATH }}"
+        echo "Deployment completed successfully!"
+        echo "Website URL: http://${{ secrets.AZURE_VM_HOST }}/App/Test/TestForGithubAction"
+        echo "Deploy path: ${{ secrets.IIS_SITE_PATH }}"
       shell: powershell
