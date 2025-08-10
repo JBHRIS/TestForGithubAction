@@ -54,7 +54,8 @@ jobs:
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
         # Set deployment parameters
-        $publishPath = ".\publish"
+        $currentPath = Get-Location
+        $publishPath = Join-Path $currentPath "publish"
         $serverUrl = "${{ secrets.AZURE_VM_HOST }}"
         $siteName = "${{ secrets.IIS_SITE_PATH }}"
         $username = "${{ secrets.AZURE_VM_USERNAME }}"
@@ -72,43 +73,54 @@ jobs:
         }
         
         Write-Host "Using MSDeploy path: $msdeployPath"
-        Write-Host "Deploy source: $publishPath"
+        Write-Host "Current directory: $currentPath"
+        Write-Host "Publish path (absolute): $publishPath"
         Write-Host "Deploy target: $siteName"
         Write-Host "Server: $serverUrl"
         
-        # Execute deployment using the same format as your working publish profile
-        $deployCommand = @(
-            "-verb:sync"
-            "-source:iisApp=`"$publishPath`""
-            "-dest:iisApp=`"$siteName`",computerName=`"https://$serverUrl:8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`""
-            "-allowUntrusted"
-            "-enableRule:DoNotDeleteRule"
-            "-skip:Directory=`"\\App_Data`""
-            "-retryAttempts:3"
-            "-retryInterval:5000"
+        # Check if publish directory exists and has content
+        if (-not (Test-Path $publishPath)) {
+            Write-Error "Publish directory not found: $publishPath"
+            exit 1
+        }
+        
+        $publishFiles = Get-ChildItem $publishPath -Recurse
+        Write-Host "Files in publish directory: $($publishFiles.Count)"
+        
+        # Build MSDeploy command step by step
+        $msdeployArgs = @(
+            "-verb:sync",
+            "-source:iisApp=`"$publishPath`"",
+            "-dest:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
+            "-allowUntrusted",
             "-verbose"
         )
         
-        Write-Host "Executing MSDeploy command..."
-        & $msdeployPath $deployCommand
+        Write-Host "MSDeploy arguments:"
+        $msdeployArgs | ForEach-Object { Write-Host "  $_" }
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Deployment failed with exit code: $LASTEXITCODE"
+        # Execute deployment
+        Write-Host "Executing MSDeploy..."
+        $process = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgs -Wait -PassThru -NoNewWindow
+        
+        Write-Host "MSDeploy exit code: $($process.ExitCode)"
+        
+        if ($process.ExitCode -ne 0) {
+            Write-Host "iisApp deployment failed, trying contentPath..."
             
-            # Try alternative approach - use contentPath
-            Write-Host "Trying alternative deployment method..."
-            $deployCommand2 = @(
-                "-verb:sync"
-                "-source:contentPath=`"$publishPath`""
-                "-dest:contentPath=`"$siteName`",computerName=`"https://$serverUrl:8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`""
-                "-allowUntrusted"
-                "-retryAttempts:2"
+            # Try with contentPath
+            $msdeployArgs2 = @(
+                "-verb:sync",
+                "-source:contentPath=`"$publishPath`"",
+                "-dest:contentPath=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
+                "-allowUntrusted",
                 "-verbose"
             )
             
-            & $msdeployPath $deployCommand2
+            Write-Host "Trying contentPath deployment..."
+            $process2 = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgs2 -Wait -PassThru -NoNewWindow
             
-            if ($LASTEXITCODE -ne 0) {
+            if ($process2.ExitCode -ne 0) {
                 Write-Error "Both deployment methods failed"
                 exit 1
             }
