@@ -74,18 +74,33 @@ jobs:
         Write-Host "Using MSDeploy path: $msdeployPath"
         Write-Host "Deploy source: $publishPath"
         Write-Host "Deploy target: $siteName"
+        Write-Host "Server URL: $serverUrl"
         
-        # Execute deployment
+        # Execute deployment using iisApp provider instead of contentPath
         & $msdeployPath `
           -verb:sync `
-          -source:contentPath="$publishPath" `
-          -dest:contentPath="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
+          -source:iisApp="$publishPath" `
+          -dest:iisApp="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
           -allowUntrusted:true `
-          -skip:Directory="\\App_Data" `
-          -enableRule:DoNotDeleteRule `
+          -enableRule:AppOfflineRule `
           -retryAttempts:3 `
           -retryInterval:5000 `
           -verbose
+          
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "First deployment attempt failed, trying alternative method..."
+            
+            # Alternative: Use contentPath with full physical path
+            & $msdeployPath `
+              -verb:sync `
+              -source:contentPath="$publishPath" `
+              -dest:contentPath="$siteName",computerName="$serverUrl",username="$username",password="$password",authType="basic" `
+              -allowUntrusted:true `
+              -enableRule:AppOfflineRule `
+              -retryAttempts:2 `
+              -retryInterval:3000 `
+              -verbose
+        }
       shell: powershell
       
     - name: Deployment Summary
