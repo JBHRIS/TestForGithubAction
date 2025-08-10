@@ -86,8 +86,28 @@ jobs:
         
         $publishFiles = Get-ChildItem $publishPath -Recurse
         Write-Host "Files in publish directory: $($publishFiles.Count)"
+        Write-Host "Sample files:"
+        $publishFiles | Select-Object -First 5 | ForEach-Object { Write-Host "  $($_.FullName)" }
         
-        # Build MSDeploy command step by step
+        # First, let's do a whatif deployment to see what would happen
+        Write-Host "=== PERFORMING WHATIF DEPLOYMENT ==="
+        $msdeployArgsWhatIf = @(
+            "-verb:sync",
+            "-source:iisApp=`"$publishPath`"",
+            "-dest:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
+            "-allowUntrusted",
+            "-whatif",
+            "-verbose"
+        )
+        
+        Write-Host "WhatIf MSDeploy arguments:"
+        $msdeployArgsWhatIf | ForEach-Object { Write-Host "  $_" }
+        
+        $processWhatIf = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgsWhatIf -Wait -PassThru -NoNewWindow
+        Write-Host "WhatIf exit code: $($processWhatIf.ExitCode)"
+        
+        # Now do the actual deployment
+        Write-Host "=== PERFORMING ACTUAL DEPLOYMENT ==="
         $msdeployArgs = @(
             "-verb:sync",
             "-source:iisApp=`"$publishPath`"",
@@ -96,7 +116,7 @@ jobs:
             "-verbose"
         )
         
-        Write-Host "MSDeploy arguments:"
+        Write-Host "Actual MSDeploy arguments:"
         $msdeployArgs | ForEach-Object { Write-Host "  $_" }
         
         # Execute deployment
@@ -105,25 +125,22 @@ jobs:
         
         Write-Host "MSDeploy exit code: $($process.ExitCode)"
         
-        if ($process.ExitCode -ne 0) {
-            Write-Host "iisApp deployment failed, trying contentPath..."
+        if ($process.ExitCode -eq 0) {
+            Write-Host "=== DEPLOYMENT SUCCESS - CHECKING DESTINATION ==="
             
-            # Try with contentPath
-            $msdeployArgs2 = @(
-                "-verb:sync",
-                "-source:contentPath=`"$publishPath`"",
-                "-dest:contentPath=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
-                "-allowUntrusted",
-                "-verbose"
+            # Try to verify the deployment by listing the destination
+            $verifyArgs = @(
+                "-verb:dump",
+                "-source:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
+                "-allowUntrusted"
             )
             
-            Write-Host "Trying contentPath deployment..."
-            $process2 = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgs2 -Wait -PassThru -NoNewWindow
-            
-            if ($process2.ExitCode -ne 0) {
-                Write-Error "Both deployment methods failed"
-                exit 1
-            }
+            Write-Host "Verifying deployment with dump command..."
+            $verifyProcess = Start-Process -FilePath $msdeployPath -ArgumentList $verifyArgs -Wait -PassThru -NoNewWindow
+            Write-Host "Verify exit code: $($verifyProcess.ExitCode)"
+        } else {
+            Write-Error "Deployment failed with exit code: $($process.ExitCode)"
+            exit 1
         }
         
         Write-Host "Deployment completed successfully!"
