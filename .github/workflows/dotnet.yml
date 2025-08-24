@@ -31,121 +31,23 @@ jobs:
     - name: Publish
       run: dotnet publish --no-build --configuration Release --output ./publish
       
-    - name: Install Web Deploy
+    - name: IIS Deploy
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      run: |
-        # Download and install Web Deploy
-        $webDeployUrl = "https://download.microsoft.com/download/0/1/D/01DC28EA-638C-4A22-A57B-4CEF97755C6C/WebDeploy_amd64_en-US.msi"
-        $webDeployPath = "$env:TEMP\WebDeploy_amd64_en-US.msi"
+      uses: ChristopheLav/iis-deploy@v1.1.1
+      with:
+        # IIS website name
+        website-name: "${{ secrets.IIS_SITE_PATH }}"
+        # MS Deploy Service URL - 需要包含完整的端點路徑
+        msdeploy-service-url: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
+        # Username used by Basic authentication to the MS Deploy Service
+        msdeploy-username: "${{ secrets.AZURE_VM_USERNAME }}"
+        # Password used by Basic authentication to the MS Deploy Service
+        msdeploy-password: "${{ secrets.AZURE_VM_PASSWORD }}"
+        # The path to the source directory that will be deployed
+        source-path: "${{ github.workspace }}\\publish"
+        # Indicates if the existing directories/files are kept during deployment
+        skip-extra-files: true
         
-        Write-Host "Downloading Web Deploy..."
-        Invoke-WebRequest -Uri $webDeployUrl -OutFile $webDeployPath
-        
-        Write-Host "Installing Web Deploy..."
-        Start-Process msiexec.exe -ArgumentList "/i", $webDeployPath, "/quiet", "/norestart" -Wait
-        
-        # Wait for installation to complete
-        Start-Sleep -Seconds 10
-        
-        Write-Host "Web Deploy installation completed"
-      shell: powershell
-      
-    - name: Deploy to Azure VM IIS
-      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      run: |
-        # Set deployment parameters
-        $currentPath = Get-Location
-        $publishPath = Join-Path $currentPath "publish"
-        $serverUrl = "${{ secrets.AZURE_VM_HOST }}"
-        $siteName = "${{ secrets.IIS_SITE_PATH }}"
-        $username = "${{ secrets.AZURE_VM_USERNAME }}"
-        $password = "${{ secrets.AZURE_VM_PASSWORD }}"
-        
-        # Check if MSDeploy exists
-        $msdeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-        if (-not (Test-Path $msdeployPath)) {
-            $msdeployPath = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-        }
-        
-        if (-not (Test-Path $msdeployPath)) {
-            Write-Error "MSDeploy.exe not found"
-            exit 1
-        }
-        
-        Write-Host "Using MSDeploy path: $msdeployPath"
-        Write-Host "Current directory: $currentPath"
-        Write-Host "Publish path (absolute): $publishPath"
-        Write-Host "Deploy target: $siteName"
-        Write-Host "Server: $serverUrl"
-        
-        # Check if publish directory exists and has content
-        if (-not (Test-Path $publishPath)) {
-            Write-Error "Publish directory not found: $publishPath"
-            exit 1
-        }
-        
-        $publishFiles = Get-ChildItem $publishPath -Recurse
-        Write-Host "Files in publish directory: $($publishFiles.Count)"
-        Write-Host "Sample files:"
-        $publishFiles | Select-Object -First 5 | ForEach-Object { Write-Host "  $($_.FullName)" }
-        
-        # First, let's do a whatif deployment to see what would happen
-        Write-Host "=== PERFORMING WHATIF DEPLOYMENT ==="
-        $msdeployArgsWhatIf = @(
-            "-verb:sync",
-            "-source:iisApp=`"$publishPath`"",
-            "-dest:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
-            "-allowUntrusted",
-            "-whatif",
-            "-verbose"
-        )
-        
-        Write-Host "WhatIf MSDeploy arguments:"
-        $msdeployArgsWhatIf | ForEach-Object { Write-Host "  $_" }
-        
-        $processWhatIf = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgsWhatIf -Wait -PassThru -NoNewWindow
-        Write-Host "WhatIf exit code: $($processWhatIf.ExitCode)"
-        
-        # Now do the actual deployment
-        Write-Host "=== PERFORMING ACTUAL DEPLOYMENT ==="
-        $msdeployArgs = @(
-            "-verb:sync",
-            "-source:iisApp=`"$publishPath`"",
-            "-dest:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
-            "-allowUntrusted",
-            "-verbose"
-        )
-        
-        Write-Host "Actual MSDeploy arguments:"
-        $msdeployArgs | ForEach-Object { Write-Host "  $_" }
-        
-        # Execute deployment
-        Write-Host "Executing MSDeploy..."
-        $process = Start-Process -FilePath $msdeployPath -ArgumentList $msdeployArgs -Wait -PassThru -NoNewWindow
-        
-        Write-Host "MSDeploy exit code: $($process.ExitCode)"
-        
-        if ($process.ExitCode -eq 0) {
-            Write-Host "=== DEPLOYMENT SUCCESS - CHECKING DESTINATION ==="
-            
-            # Try to verify the deployment by listing the destination
-            $verifyArgs = @(
-                "-verb:dump",
-                "-source:iisApp=`"$siteName`",computerName=`"https://$($serverUrl):8172/msdeploy.axd`",userName=`"$username`",password=`"$password`",authType=`"Basic`"",
-                "-allowUntrusted"
-            )
-            
-            Write-Host "Verifying deployment with dump command..."
-            $verifyProcess = Start-Process -FilePath $msdeployPath -ArgumentList $verifyArgs -Wait -PassThru -NoNewWindow
-            Write-Host "Verify exit code: $($verifyProcess.ExitCode)"
-        } else {
-            Write-Error "Deployment failed with exit code: $($process.ExitCode)"
-            exit 1
-        }
-        
-        Write-Host "Deployment completed successfully!"
-      shell: powershell
-      
     - name: Deployment Summary
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
