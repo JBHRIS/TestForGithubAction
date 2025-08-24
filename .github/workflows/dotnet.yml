@@ -34,12 +34,12 @@ jobs:
     - name: IIS Web App Deploy
       uses: cschleiden/webdeploy-action@v1
       with:
-        webSiteName: "${{ secrets.IIS_SITE_PATH }}"
-        package: "./publish"
-        webDeployServiceUrl: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
-        username: "${{ secrets.AZURE_VM_USERNAME }}"
-        password: "${{ secrets.AZURE_VM_PASSWORD }}"
-        allowUntrusted: true
+       webSiteName: "Default Web Site/App/Test/TestForGithubAction"  # 直接寫值測試
+       package: "./publish"
+       webDeployServiceUrl: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
+       username: "${{ secrets.AZURE_VM_USERNAME }}"
+       password: "${{ secrets.AZURE_VM_PASSWORD }}"
+       allowUntrusted: "true"
         
     - name: Deployment Summary
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
