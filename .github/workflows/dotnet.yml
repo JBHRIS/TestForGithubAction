@@ -39,7 +39,7 @@ jobs:
         website-name: "${{ secrets.IIS_SITE_PATH }}"
         msdeploy-service-url: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
         msdeploy-username: "${{ secrets.AZURE_VM_USERNAME }}"
-        msdeploy-password: $(MSDEPLOY_PASSWORD)  # 從環境變數讀取
+        msdeploy-password: "${{ MSDEPLOY_PASSWORD }}"  # 從環境變數讀取
         source-path: "${{ github.workspace }}\\publish"
         skip-extra-files: true
         
