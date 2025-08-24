@@ -14,31 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Debug Info (without secrets)
-      run: |
-        echo "Workspace: ${{ github.workspace }}"
-        echo "Publish folder exists:"
-        Test-Path "${{ github.workspace }}\publish"
-        Get-ChildItem "${{ github.workspace }}\publish" -Name
-      shell: powershell
-      
-    - name: Verify Paths
-      run: |
-        Write-Host "==================== PATH INFO ===================="
-        Write-Host "GitHub Workspace: ${{ github.workspace }}"
-        Write-Host "Runner Temp: ${{ runner.temp }}"
-        Write-Host "Runner Tool Cache: ${{ runner.tool_cache }}"
-        Write-Host ""
-        Write-Host "==================== PUBLISH FOLDER ===================="
-        $publishPath = "${{ github.workspace }}\publish"
-        Write-Host "Publish Path: $publishPath"
-        Write-Host "Exists: $(Test-Path $publishPath)"
-        if (Test-Path $publishPath) {
-          Write-Host "Contents:"
-          Get-ChildItem $publishPath -Recurse | Select-Object FullName
-        }
-      shell: powershell
-    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
