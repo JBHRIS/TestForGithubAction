@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup .NET
+- name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
@@ -39,7 +39,7 @@ jobs:
         website-name: "${{ secrets.IIS_SITE_PATH }}"
         msdeploy-service-url: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
         msdeploy-username: "${{ secrets.AZURE_VM_USERNAME }}"
-        msdeploy-password: "${{ MSDEPLOY_PASSWORD }}"  # 從環境變數讀取
+        msdeploy-password: ${{ env.MSDEPLOY_PASSWORD }}  # 從環境變數讀取
         source-path: "${{ github.workspace }}\\publish"
         skip-extra-files: true
         
