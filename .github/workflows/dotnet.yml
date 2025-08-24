@@ -1,3 +1,4 @@
+# This workflow will build a .NET project and deploy to Azure VM IIS
 name: .NET CI/CD
 
 on:
@@ -12,6 +13,31 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Debug Info (without secrets)
+      run: |
+        echo "Workspace: ${{ github.workspace }}"
+        echo "Publish folder exists:"
+        Test-Path "${{ github.workspace }}\publish"
+        Get-ChildItem "${{ github.workspace }}\publish" -Name
+      shell: powershell
+      
+    - name: Verify Paths
+      run: |
+        Write-Host "==================== PATH INFO ===================="
+        Write-Host "GitHub Workspace: ${{ github.workspace }}"
+        Write-Host "Runner Temp: ${{ runner.temp }}"
+        Write-Host "Runner Tool Cache: ${{ runner.tool_cache }}"
+        Write-Host ""
+        Write-Host "==================== PUBLISH FOLDER ===================="
+        $publishPath = "${{ github.workspace }}\publish"
+        Write-Host "Publish Path: $publishPath"
+        Write-Host "Exists: $(Test-Path $publishPath)"
+        if (Test-Path $publishPath) {
+          Write-Host "Contents:"
+          Get-ChildItem $publishPath -Recurse | Select-Object FullName
+        }
+      shell: powershell
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -29,35 +55,23 @@ jobs:
       
     - name: Publish
       run: dotnet publish --no-build --configuration Release --output ./publish
-    
-    # ⬇️ 除錯步驟應該在 Publish 之後！
-    - name: Verify Publish Output
-      run: |
-        Write-Host "==================== AFTER PUBLISH ===================="
-        Write-Host "GitHub Workspace: ${{ github.workspace }}"
-        Write-Host ""
-        Write-Host "Publish folder check:"
-        $publishPath = "${{ github.workspace }}\publish"
-        Write-Host "Path: $publishPath"
-        Write-Host "Exists: $(Test-Path $publishPath)"
-        
-        if (Test-Path $publishPath) {
-          Write-Host ""
-          Write-Host "Files in publish folder:"
-          Get-ChildItem $publishPath -Name
-          
-          Write-Host ""
-          Write-Host "Total files:"
-          (Get-ChildItem $publishPath -Recurse -File).Count
-        }
-      shell: powershell
       
     - name: IIS Deploy
       uses: ChristopheLav/iis-deploy@v1.1.1
+      env:
+        MSDEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
       with:
         website-name: "${{ secrets.IIS_SITE_PATH }}"
         msdeploy-service-url: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
         msdeploy-username: "${{ secrets.AZURE_VM_USERNAME }}"
-        msdeploy-password: "${{ secrets.AZURE_VM_PASSWORD }}"
+        msdeploy-password: $(MSDEPLOY_PASSWORD)  # 從環境變數讀取
         source-path: "${{ github.workspace }}\\publish"
         skip-extra-files: true
+        
+    - name: Deployment Summary
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: |
+        echo "Deployment completed successfully!"
+        echo "Website URL: http://${{ secrets.AZURE_VM_HOST }}/App/Test/TestForGithubAction"
+        echo "Deploy path: ${{ secrets.IIS_SITE_PATH }}"
+      shell: powershell
