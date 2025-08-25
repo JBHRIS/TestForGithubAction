@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git mv:*)",
+      "Bash(sqlcmd:*)",
+      "Bash(find:*)",
+      "Bash(apt:*)",
+      "Bash(apt install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

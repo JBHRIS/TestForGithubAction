@@ -31,20 +31,20 @@ jobs:
     - name: Publish
       run: dotnet publish --no-build --configuration Release --output ./publish
       
-    - name: IIS Web App Deploy
-      uses: cschleiden/webdeploy-action@v1
+    - name: Deploy to IIS
+      uses: ChristopheLav/iis-deploy@v1
       with:
-       webSiteName: "Default Web Site/App/Test/TestForGithubAction"  # 直接寫值測試
-       package: "./publish"
-       webDeployServiceUrl: "https://${{ secrets.AZURE_VM_HOST }}:8172/msdeploy.axd"
-       username: "${{ secrets.AZURE_VM_USERNAME }}"
-       password: "${{ secrets.AZURE_VM_PASSWORD }}"
-       allowUntrusted: "true"
+        website-name: '${{ secrets.AZURE_VM_HOST }}'
+        msdeploy-service-url: 'https://20.205.99.114:8172/MSDeploy.axd'
+        msdeploy-username: '${{ secrets.AZURE_VM_USERNAME }}'
+        msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
+        source-path: './publish'
+        skip-extra-files: false
         
     - name: Deployment Summary
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
         echo "Deployment completed successfully!"
-        echo "Website URL: http://${{ secrets.AZURE_VM_HOST }}/App/Test/TestForGithubAction"
-        echo "Deploy path: ${{ secrets.IIS_SITE_PATH }}"
+        echo "Deployed to IIS site: ${{ secrets.AZURE_VM_HOST }}"
+        echo "Source path: ./publish"
       shell: powershell
