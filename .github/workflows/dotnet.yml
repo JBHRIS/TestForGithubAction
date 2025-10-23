@@ -1,5 +1,5 @@
 # This workflow will build a .NET project and deploy to Azure VM IIS
-name: .NET CI/CD
+name: .NET CI/CD Pipeline
 
 on:
   push:
