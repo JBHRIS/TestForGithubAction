@@ -1,0 +1,43 @@
+name: Deploy to IIS
+
+on:
+  push:
+    branches: [main, For-portal-CICD]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+
+      - name: Deploy to IIS
+        uses: ChristopheLav/iis-deploy@v1
+        with:
+          deployUserName: ${{ secrets.DEPLOY_USERNAME }}
+          deployUserPassword: ${{ secrets.DEPLOY_PASSWORD }}
+          deployUrl: https://20.205.99.114:8172/MSDeploy.axd
+          appPath: ./publish
+          siteName: 'Default Web Site'
+          appName: 'TestForGithubAction'
+          removeAdditionalFilesFlag: false
