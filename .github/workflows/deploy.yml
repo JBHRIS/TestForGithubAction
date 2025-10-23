@@ -34,10 +34,9 @@ jobs:
       - name: Deploy to IIS
         uses: ChristopheLav/iis-deploy@v1
         with:
-          deployUserName: ${{ secrets.DEPLOY_USERNAME }}
-          deployUserPassword: ${{ secrets.DEPLOY_PASSWORD }}
-          deployUrl: https://20.205.99.114:8172/MSDeploy.axd
-          appPath: ./publish
-          siteName: 'Default Web Site'
-          appName: 'TestForGithubAction'
-          removeAdditionalFilesFlag: false
+            msdeploy-username: ${{ secrets.DEPLOY_USERNAME }}
+            msdeploy-password: ${{ secrets.DEPLOY_PASSWORD }}
+            msdeploy-service-url: https://20.205.99.114:8172/MSDeploy.axd
+            source-path: ./publish
+            website-name: 'Default Web Site'
+            skip-extra-files: false
