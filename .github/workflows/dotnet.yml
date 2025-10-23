@@ -3,9 +3,9 @@ name: .NET CI/CD
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master" ,"For-portal-CICD"]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master" ,"For-portal-CICD"]
 
 jobs:
   build-and-deploy:
@@ -13,24 +13,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-        
+
     - name: Restore dependencies
       run: dotnet restore
-      
+
     - name: Build
       run: dotnet build --no-restore --configuration Release
-      
+
     - name: Test
       run: dotnet test --no-build --verbosity normal --configuration Release
-      
+
     - name: Publish
       run: dotnet publish --no-build --configuration Release --output ./publish
-      
+
     - name: Deploy to IIS
       uses: ChristopheLav/iis-deploy@v1
       with:
@@ -40,7 +40,7 @@ jobs:
         msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
         source-path: './publish'
         skip-extra-files: false
-        
+
     - name: Deployment Summary
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
       run: |
