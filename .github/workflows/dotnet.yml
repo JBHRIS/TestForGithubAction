@@ -3,9 +3,9 @@ name: .NET CI/CD Pipeline
 
 on:
   push:
-    branches: [ "master", "For-portal-CICD" ]
+    branches: ['master', 'For-portal-CICD']
   pull_request:
-    branches: [ "master", "For-portal-CICD" ]
+    branches: ['master', 'For-portal-CICD']
 
 jobs:
   ci:
@@ -19,7 +19,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 8.0.x
 
       - name: Restore dependencies
         run: dotnet restore
@@ -43,7 +43,7 @@ jobs:
     name: CD Pipeline
     needs: ci
     runs-on: windows-latest
-    if: github.event_name == 'push'  # 只在 push 執行部署
+    if: github.event_name == 'push' # 只在 push 執行部署
 
     steps:
       - name: Checkout code
@@ -71,4 +71,3 @@ jobs:
           echo "Deployed to IIS site: ${{ secrets.AZURE_VM_HOST }}"
           echo "Source path: ./publish"
         shell: powershell
-
