@@ -68,15 +68,10 @@ jobs:
 
           $destPath = "$env:WEBSITE_NAME" + "/" + "$env:APP_NAME"
 
-          msdeploy `
-            -verb:sync `
-            -source:contentPath=./publish `
-            -dest:contentPath="$destPath" `
-            -dest:ComputerName="$env:DEPLOY_URL" `
-            -dest:UserName="$env:DEPLOY_USERNAME" `
-            -dest:Password="$env:DEPLOY_PASSWORD" `
-            -dest:AuthType=Basic `
-            -allowUntrusted
+          # 使用轉義符號處理密碼中的特殊字元
+          $passwordEscaped = [System.Web.HttpUtility]::UrlEncode("$env:DEPLOY_PASSWORD")
+
+          msdeploy -verb:sync -source:contentPath=./publish -dest:contentPath=$destPath -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
         shell: powershell
 
       - name: Deployment Summary
