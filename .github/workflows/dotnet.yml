@@ -79,12 +79,22 @@ jobs:
           Write-Host "Testing connection..."
 
           $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          & $webDeployPath -verb:getSystemInfo -source:getSystemInfo -dest:ComputerName=$env:DEPLOY_URL,UserName=$env:DEPLOY_USERNAME,Password=$env:DEPLOY_PASSWORD,AuthType=Basic -allowUntrusted
+
+          # Test connection by getting providers from remote server
+          & $webDeployPath -verb:dump `
+            -source:objectName=webServer60 `
+            -dest:provider=webServer60,ComputerName=$env:DEPLOY_URL,UserName=$env:DEPLOY_USERNAME,Password=$env:DEPLOY_PASSWORD,AuthType=Basic `
+            -allowUntrusted `
+            -whatif
 
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Connection SUCCESS!"
           } else {
             Write-Host "Connection FAILED. Error code: $LASTEXITCODE"
+            Write-Host "Please check:"
+            Write-Host "1. Is the Web Deploy service running on the target server?"
+            Write-Host "2. Are the credentials correct?"
+            Write-Host "3. Is port 8172 open?"
             exit $LASTEXITCODE
           }
         shell: powershell
