@@ -61,32 +61,25 @@ jobs:
           DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
           DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
         run: |
-          Write-Host "=== 測試 MSDeploy 連線 ===" -ForegroundColor Cyan
+          Write-Host "=== 測試 MSDeploy 連線 ==="
           Write-Host "連線 URL: $env:DEPLOY_URL"
           Write-Host "使用者名稱: $env:DEPLOY_USERNAME"
+          Write-Host "正在測試連線..."
 
-          # 測試連線
-          try {
-            Write-Host "正在測試連線..." -ForegroundColor Yellow
-            $result = msdeploy -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted 2>&1
+          msdeploy -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
 
-            if ($LASTEXITCODE -eq 0) {
-              Write-Host "✓ 連線成功！" -ForegroundColor Green
-            } else {
-              Write-Host "✗ 連線失敗" -ForegroundColor Red
-              Write-Host $result
-              exit $LASTEXITCODE
-            }
-          } catch {
-            Write-Host "✗ 發生錯誤: $_" -ForegroundColor Red
-            exit 1
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "連線成功！"
+          } else {
+            Write-Host "連線失敗，錯誤碼: $LASTEXITCODE"
+            exit $LASTEXITCODE
           }
         shell: powershell
 
       - name: Show Test Results
         run: |
-          Write-Host "=== 測試完成 ===" -ForegroundColor Green
-          Write-Host "如果上一步測試成功，請取消下面的註解來執行實際部署" -ForegroundColor Yellow
+          Write-Host "=== 測試完成 ==="
+          Write-Host "如果上一步測試成功，請取消下面的註解來執行實際部署"
         shell: powershell
 
       # 暫時註解，先只測試連線
