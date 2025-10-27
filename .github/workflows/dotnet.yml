@@ -58,13 +58,12 @@ jobs:
       - name: Deploy to IIS
         uses: ChristopheLav/iis-deploy@v1
         with:
-          website-name: '${{ secrets.IIS_SITE_NAME }}'
+          website-name: '${{ secrets.IIS_SITE_NAME }}/${{ secrets.IIS_APP_NAME }}'
           msdeploy-service-url: 'https://20.205.99.114:8172/MSDeploy.axd'
           msdeploy-username: '${{ secrets.AZURE_VM_USERNAME }}'
           msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
           source-path: './publish'
           skip-extra-files: false
-          app-name: '${{ secrets.IIS_APP_NAME }}'
 
       - name: Deployment Summary
         run: |
