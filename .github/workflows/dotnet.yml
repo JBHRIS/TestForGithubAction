@@ -56,29 +56,27 @@ jobs:
           path: ./publish
 
       - name: Deploy to IIS
+        env:
+          WEBSITE_NAME: ${{ secrets.IIS_SITE_NAME }}
+          APP_NAME: ${{ secrets.IIS_APP_NAME }}
+          DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
+          DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
+          DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
         run: |
-          $websiteName = '${{ secrets.IIS_SITE_NAME }}'
-          $appName = '${{ secrets.IIS_APP_NAME }}'
-          $deployUrl = 'https://20.205.99.114:8172/MSDeploy.axd'
-          $username = '${{ secrets.AZURE_VM_USERNAME }}'
-          $password = '${{ secrets.AZURE_VM_PASSWORD }}'
+          Write-Host "部署到網站: $env:WEBSITE_NAME"
+          Write-Host "應用程式名稱: $env:APP_NAME"
 
-          Write-Host "部署到網站: $websiteName"
-          Write-Host "應用程式名稱: $appName"
+          $destPath = "$env:WEBSITE_NAME" + "/" + "$env:APP_NAME"
 
-          $destPath = "$websiteName" + "/" + "$appName"
-          $msdeployArgs = @(
-            '-verb:sync',
-            '-source:contentPath=./publish',
-            "-dest:contentPath=$destPath",
-            "-dest:ComputerName=$deployUrl",
-            "-dest:UserName=$username",
-            "-dest:Password=$password",
-            '-dest:AuthType=Basic',
-            '-allowUntrusted'
-          )
-
-          & msdeploy $msdeployArgs
+          msdeploy `
+            -verb:sync `
+            -source:contentPath=./publish `
+            -dest:contentPath="$destPath" `
+            -dest:ComputerName="$env:DEPLOY_URL" `
+            -dest:UserName="$env:DEPLOY_USERNAME" `
+            -dest:Password="$env:DEPLOY_PASSWORD" `
+            -dest:AuthType=Basic `
+            -allowUntrusted
         shell: powershell
 
       - name: Deployment Summary
