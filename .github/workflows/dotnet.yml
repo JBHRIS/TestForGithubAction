@@ -79,7 +79,7 @@ jobs:
           Write-Host "Testing connection..."
 
           $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          & $webDeployPath -verb:getSystemInfo -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
+          & $webDeployPath -verb:getSystemInfo -dest:ComputerName=$env:DEPLOY_URL,UserName=$env:DEPLOY_USERNAME,Password=$env:DEPLOY_PASSWORD,AuthType=Basic -allowUntrusted
 
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Connection SUCCESS!"
