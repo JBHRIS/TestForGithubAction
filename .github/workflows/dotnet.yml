@@ -61,25 +61,25 @@ jobs:
           DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
           DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
         run: |
-          Write-Host "=== 測試 MSDeploy 連線 ==="
-          Write-Host "連線 URL: $env:DEPLOY_URL"
-          Write-Host "使用者名稱: $env:DEPLOY_USERNAME"
-          Write-Host "正在測試連線..."
+          Write-Host "=== Testing MSDeploy Connection ==="
+          Write-Host "URL: $env:DEPLOY_URL"
+          Write-Host "Username: $env:DEPLOY_USERNAME"
+          Write-Host "Testing connection..."
 
           msdeploy -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
 
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "連線成功！"
+            Write-Host "Connection SUCCESS!"
           } else {
-            Write-Host "連線失敗，錯誤碼: $LASTEXITCODE"
+            Write-Host "Connection FAILED. Error code: $LASTEXITCODE"
             exit $LASTEXITCODE
           }
         shell: powershell
 
       - name: Show Test Results
         run: |
-          Write-Host "=== 測試完成 ==="
-          Write-Host "如果上一步測試成功，請取消下面的註解來執行實際部署"
+          Write-Host "=== Test Completed ==="
+          Write-Host "If the connection test passed, uncomment the deployment steps below"
         shell: powershell
 
       # 暫時註解，先只測試連線
