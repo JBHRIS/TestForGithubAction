@@ -55,28 +55,52 @@ jobs:
           name: publish
           path: ./publish
 
-      - name: Deploy to IIS
+      - name: Test MSDeploy Connection
         env:
-          WEBSITE_NAME: ${{ secrets.IIS_SITE_NAME }}
-          APP_NAME: ${{ secrets.IIS_APP_NAME }}
           DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
           DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
           DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
         run: |
-          Write-Host "部署到網站: $env:WEBSITE_NAME"
-          Write-Host "應用程式名稱: $env:APP_NAME"
+          Write-Host "=== 測試 MSDeploy 連線 ===" -ForegroundColor Cyan
+          Write-Host "連線 URL: $env:DEPLOY_URL"
+          Write-Host "使用者名稱: $env:DEPLOY_USERNAME"
 
-          $destPath = "$env:WEBSITE_NAME" + "/" + "$env:APP_NAME"
+          # 測試連線
+          try {
+            Write-Host "正在測試連線..." -ForegroundColor Yellow
+            $result = msdeploy -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted 2>&1
 
-          # 使用轉義符號處理密碼中的特殊字元
-          $passwordEscaped = [System.Web.HttpUtility]::UrlEncode("$env:DEPLOY_PASSWORD")
-
-          msdeploy -verb:sync -source:contentPath=./publish -dest:contentPath=$destPath -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "✓ 連線成功！" -ForegroundColor Green
+            } else {
+              Write-Host "✗ 連線失敗" -ForegroundColor Red
+              Write-Host $result
+              exit $LASTEXITCODE
+            }
+          } catch {
+            Write-Host "✗ 發生錯誤: $_" -ForegroundColor Red
+            exit 1
+          }
         shell: powershell
 
-      - name: Deployment Summary
+      - name: Show Test Results
         run: |
-          echo "Deployment completed successfully!"
-          echo "Deployed to IIS site: ${{ secrets.IIS_SITE_NAME }}"
-          echo "Source path: ./publish"
+          Write-Host "=== 測試完成 ===" -ForegroundColor Green
+          Write-Host "如果上一步測試成功，請取消下面的註解來執行實際部署" -ForegroundColor Yellow
         shell: powershell
+
+      # 暫時註解，先只測試連線
+      # - name: Deploy to IIS
+      #   env:
+      #     WEBSITE_NAME: ${{ secrets.IIS_SITE_NAME }}
+      #     APP_NAME: ${{ secrets.IIS_APP_NAME }}
+      #     DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
+      #     DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
+      #     DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
+      #   run: |
+      #     Write-Host "部署到網站: $env:WEBSITE_NAME"
+      #     Write-Host "應用程式名稱: $env:APP_NAME"
+      #     $destPath = "$env:WEBSITE_NAME" + "/" + "$env:APP_NAME"
+      #     Write-Host "準備部署到: $destPath"
+      #     msdeploy -verb:sync -source:contentPath=./publish -dest:contentPath=$destPath -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
+      #   shell: powershell
