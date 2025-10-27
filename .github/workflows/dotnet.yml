@@ -58,7 +58,7 @@ jobs:
       - name: Deploy to IIS
         uses: ChristopheLav/iis-deploy@v1
         with:
-          website-name: 'Default Web Site/NonSubscription'  # 修改這裡
+          website-name: '"Default Web Site/NonSubscription"' # 修改這裡
           msdeploy-service-url: 'https://20.205.99.114:8172/MSDeploy.axd'
           msdeploy-username: '${{ secrets.AZURE_VM_USERNAME }}'
           msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
