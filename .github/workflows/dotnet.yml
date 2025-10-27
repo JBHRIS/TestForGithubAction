@@ -63,12 +63,22 @@ jobs:
           $username = '${{ secrets.AZURE_VM_USERNAME }}'
           $password = '${{ secrets.AZURE_VM_PASSWORD }}'
 
-          Write-Host "部署到網站: $websiteName" -ForegroundColor Cyan
-          Write-Host "應用程式名稱: $appName" -ForegroundColor Cyan
+          Write-Host "部署到網站: $websiteName"
+          Write-Host "應用程式名稱: $appName"
 
-          $destPath = "$websiteName/$appName"
+          $destPath = "$websiteName" + "/" + "$appName"
+          $msdeployArgs = @(
+            '-verb:sync',
+            '-source:contentPath=./publish',
+            "-dest:contentPath=$destPath",
+            "-dest:ComputerName=$deployUrl",
+            "-dest:UserName=$username",
+            "-dest:Password=$password",
+            '-dest:AuthType=Basic',
+            '-allowUntrusted'
+          )
 
-          msdeploy -verb:sync -source:contentPath='./publish' -dest:contentPath="$destPath" -dest:ComputerName="$deployUrl" -dest:UserName="$username" -dest:Password="$password" -dest:AuthType="Basic" -allowUntrusted
+          & msdeploy $msdeployArgs
         shell: powershell
 
       - name: Deployment Summary
