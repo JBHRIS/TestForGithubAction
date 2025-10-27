@@ -58,7 +58,7 @@ jobs:
       - name: Deploy to IIS
         uses: ChristopheLav/iis-deploy@v1
         with:
-          website-name: '${{ secrets.AZURE_VM_HOST }}'
+          website-name: 'Default Web Site'
           msdeploy-service-url: 'https://20.205.99.114:8172/MSDeploy.axd'
           msdeploy-username: '${{ secrets.AZURE_VM_USERNAME }}'
           msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
@@ -68,6 +68,6 @@ jobs:
       - name: Deployment Summary
         run: |
           echo "Deployment completed successfully!"
-          echo "Deployed to IIS site: ${{ secrets.AZURE_VM_HOST }}"
+          echo "Deployed to IIS site: ${{ secrets.IIS_SITE_NAME }}"
           echo "Source path: ./publish"
         shell: powershell
