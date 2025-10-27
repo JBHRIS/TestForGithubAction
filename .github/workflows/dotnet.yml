@@ -66,10 +66,9 @@ jobs:
           Write-Host "部署到網站: $websiteName" -ForegroundColor Cyan
           Write-Host "應用程式名稱: $appName" -ForegroundColor Cyan
 
-          msdeploy -verb:sync `
-            -source:contentPath='./publish' `
-            -dest:contentPath="$websiteName/$appName",ComputerName="$deployUrl",UserName="$username",Password="$password",AuthType="Basic" `
-            -allowUntrusted
+          $destPath = "$websiteName/$appName"
+
+          msdeploy -verb:sync -source:contentPath='./publish' -dest:contentPath="$destPath" -dest:ComputerName="$deployUrl" -dest:UserName="$username" -dest:Password="$password" -dest:AuthType="Basic" -allowUntrusted
         shell: powershell
 
       - name: Deployment Summary
