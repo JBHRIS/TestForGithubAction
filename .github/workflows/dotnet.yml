@@ -55,81 +55,19 @@ jobs:
           name: publish
           path: ./publish
 
-      - name: Install Web Deploy
+      - name: Deploy to IIS
+        uses: ChristopheLav/iis-deploy@v1
+        with:
+          website-name: 'Default Web Site/NonSubscription'  # 修改這裡
+          msdeploy-service-url: 'https://20.205.99.114:8172/MSDeploy.axd'
+          msdeploy-username: '${{ secrets.AZURE_VM_USERNAME }}'
+          msdeploy-password: '${{ secrets.AZURE_VM_PASSWORD }}'
+          source-path: './publish'
+          skip-extra-files: false
+
+      - name: Deployment Summary
         run: |
-          Write-Host "Checking for Web Deploy installation..."
-          $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          if (Test-Path $webDeployPath) {
-            Write-Host "Web Deploy found at: $webDeployPath"
-          } else {
-            Write-Host "Web Deploy not found. Installing..."
-            choco install webdeploy -y
-          }
+          echo "Deployment completed successfully!"
+          echo "Deployed to IIS site: ${{ secrets.AZURE_VM_HOST }}"
+          echo "Source path: ./publish"
         shell: powershell
-
-      - name: Test MSDeploy Connection
-        env:
-          DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
-          DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
-          DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
-        run: |
-          Write-Host "=== Testing MSDeploy Connection ==="
-          Write-Host "URL: $env:DEPLOY_URL"
-          Write-Host "Username: $env:DEPLOY_USERNAME"
-          Write-Host "Testing connection..."
-
-          $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-
-          Write-Host "Attempting to connect to: $env:DEPLOY_URL"
-
-          # Try to get system info from remote server
-          try {
-            $output = & $webDeployPath -verb:getSystemInfo `
-              -source:getSystemInfo `
-              -dest:getSystemInfo,ComputerName=$env:DEPLOY_URL,UserName=$env:DEPLOY_USERNAME,Password=$env:DEPLOY_PASSWORD,AuthType=Basic `
-              -allowUntrusted 2>&1
-
-            Write-Host "Output: $output"
-
-            if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq $null) {
-              Write-Host "Connection SUCCESS!"
-            } else {
-              Write-Host "Connection FAILED. Error code: $LASTEXITCODE"
-              exit $LASTEXITCODE
-            }
-          } catch {
-            Write-Host "Error occurred: $_"
-            Write-Host "This might still mean connection works. Trying actual deployment test..."
-          }
-
-          # Simple test: just ping the URL
-          Write-Host "Testing if connection is possible..."
-          $testResult = Test-NetConnection -ComputerName "20.205.99.114" -Port 8172 -WarningAction SilentlyContinue
-          if ($testResult.TcpTestSucceeded) {
-            Write-Host "Port 8172 is OPEN"
-          } else {
-            Write-Host "Port 8172 might be CLOSED or filtered"
-          }
-        shell: powershell
-
-      - name: Show Test Results
-        run: |
-          Write-Host "=== Test Completed ==="
-          Write-Host "If the connection test passed, uncomment the deployment steps below"
-        shell: powershell
-
-      # 暫時註解，先只測試連線
-      # - name: Deploy to IIS
-      #   env:
-      #     WEBSITE_NAME: ${{ secrets.IIS_SITE_NAME }}
-      #     APP_NAME: ${{ secrets.IIS_APP_NAME }}
-      #     DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
-      #     DEPLOY_USERNAME: ${{ secrets.AZURE_VM_USERNAME }}
-      #     DEPLOY_PASSWORD: ${{ secrets.AZURE_VM_PASSWORD }}
-      #   run: |
-      #     Write-Host "部署到網站: $env:WEBSITE_NAME"
-      #     Write-Host "應用程式名稱: $env:APP_NAME"
-      #     $destPath = "$env:WEBSITE_NAME" + "/" + "$env:APP_NAME"
-      #     Write-Host "準備部署到: $destPath"
-      #     msdeploy -verb:sync -source:contentPath=./publish -dest:contentPath=$destPath -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
-      #   shell: powershell
