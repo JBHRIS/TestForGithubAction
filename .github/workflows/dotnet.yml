@@ -55,6 +55,18 @@ jobs:
           name: publish
           path: ./publish
 
+      - name: Install Web Deploy
+        run: |
+          Write-Host "Checking for Web Deploy installation..."
+          $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          if (Test-Path $webDeployPath) {
+            Write-Host "Web Deploy found at: $webDeployPath"
+          } else {
+            Write-Host "Web Deploy not found. Installing..."
+            choco install webdeploy -y
+          }
+        shell: powershell
+
       - name: Test MSDeploy Connection
         env:
           DEPLOY_URL: 'https://20.205.99.114:8172/MSDeploy.axd'
@@ -66,7 +78,8 @@ jobs:
           Write-Host "Username: $env:DEPLOY_USERNAME"
           Write-Host "Testing connection..."
 
-          msdeploy -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
+          $webDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          & $webDeployPath -verb:ping -dest:ComputerName=$env:DEPLOY_URL -dest:UserName=$env:DEPLOY_USERNAME -dest:Password=$env:DEPLOY_PASSWORD -dest:AuthType=Basic -allowUntrusted
 
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Connection SUCCESS!"
